@@ -1,17 +1,19 @@
-//
-//  MealPlannerApp.swift
-//  MealPlanner
-//
-//  Created by Bhagyashree Phadnis on 14/03/26.
-//
-
 import SwiftUI
+import SwiftData
 
 @main
 struct MealPlannerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            NavigationStack {
+                MainTabView()
+            }
         }
+        .modelContainer(for: [
+            Recipe.self,
+            Ingredient.self,
+            MealPlan.self,
+            ShoppingItem.self
+        ])
     }
 }
