@@ -85,42 +85,60 @@ struct RecipeFormView: View {
     // MARK: - Photo Section
 
     private var photoSection: some View {
-        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-            ZStack {
-                if let photoData = photoData, let uiImage = UIImage(data: photoData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 200)
-                        .clipped()
-                        .overlay(
-                            VStack {
-                                Spacer()
-                                HStack {
+        ZStack(alignment: .topTrailing) {
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                ZStack {
+                    if let photoData = photoData, let uiImage = UIImage(data: photoData) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                            .clipped()
+                            .overlay(
+                                VStack {
                                     Spacer()
-                                    Image(systemName: "pencil.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(.white)
-                                        .shadow(radius: 4)
-                                        .padding(MPSpacing.md)
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: "pencil.circle.fill")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.white)
+                                            .shadow(radius: 4)
+                                            .padding(MPSpacing.md)
+                                    }
                                 }
-                            }
-                        )
-                } else {
-                    VStack(spacing: MPSpacing.md) {
-                        Image(systemName: "camera")
-                            .font(.system(size: 32, weight: .light))
-                            .foregroundColor(MPColors.primary)
-                        Text("Add Photo")
-                            .font(MPTypography.callout(.medium))
-                            .foregroundColor(MPColors.primary)
+                            )
+                    } else {
+                        VStack(spacing: MPSpacing.md) {
+                            Image(systemName: "camera")
+                                .font(.system(size: 32, weight: .light))
+                                .foregroundColor(MPColors.primary)
+                            Text("Add Photo")
+                                .font(MPTypography.callout(.medium))
+                                .foregroundColor(MPColors.primary)
+                        }
+                        .frame(height: 200)
+                        .frame(maxWidth: .infinity)
+                        .background(MPColors.primarySoft.opacity(0.5))
                     }
-                    .frame(height: 200)
-                    .frame(maxWidth: .infinity)
-                    .background(MPColors.primarySoft.opacity(0.5))
                 }
+                .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
             }
-            .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
+
+            // Delete photo button
+            if photoData != nil {
+                Button(action: {
+                    withAnimation {
+                        photoData = nil
+                        selectedPhoto = nil
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(.white, .black.opacity(0.6))
+                        .shadow(radius: 3)
+                }
+                .padding(MPSpacing.sm)
+            }
         }
     }
 

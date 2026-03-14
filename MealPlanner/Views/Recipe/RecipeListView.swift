@@ -7,6 +7,9 @@ struct RecipeListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
 
+    @State private var showingImportURL = false
+    @State private var showingImportPhoto = false
+
     private let columns = [
         GridItem(.flexible(), spacing: MPSpacing.lg),
         GridItem(.flexible(), spacing: MPSpacing.lg)
@@ -67,12 +70,10 @@ struct RecipeListView: View {
             }
             .background(MPAdaptiveColors.background(for: colorScheme))
 
-            // FAB
-            MPFloatingButton(icon: "plus") {
-                viewModel.showingAddRecipe = true
-            }
-            .padding(.trailing, MPSpacing.xl)
-            .padding(.bottom, 90)
+            // FAB with menu
+            addMenu
+                .padding(.trailing, MPSpacing.xl)
+                .padding(.bottom, 90)
         }
         .navigationDestination(for: Recipe.self) { recipe in
             RecipeDetailView(recipe: recipe, viewModel: viewModel)
@@ -82,6 +83,44 @@ struct RecipeListView: View {
         }
         .sheet(item: $viewModel.recipeToEdit) { recipe in
             RecipeFormView(viewModel: viewModel, recipe: recipe)
+        }
+        .sheet(isPresented: $showingImportURL) {
+            RecipeImportView(viewModel: viewModel, importMode: .url)
+        }
+        .sheet(isPresented: $showingImportPhoto) {
+            RecipeImportView(viewModel: viewModel, importMode: .photo)
+        }
+    }
+
+    // MARK: - Add Menu (FAB with options)
+
+    private var addMenu: some View {
+        Menu {
+            Button {
+                viewModel.showingAddRecipe = true
+            } label: {
+                Label("Add Manually", systemImage: "square.and.pencil")
+            }
+
+            Button {
+                showingImportURL = true
+            } label: {
+                Label("Import from URL", systemImage: "link")
+            }
+
+            Button {
+                showingImportPhoto = true
+            } label: {
+                Label("Scan from Photo", systemImage: "camera")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(MPColors.primary)
+                .clipShape(Circle())
+                .shadow(color: MPColors.primary.opacity(0.35), radius: 12, x: 0, y: 4)
         }
     }
 
@@ -143,6 +182,9 @@ struct RecipeCardView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .frame(height: 120)
+                        .clipped()
                 } else {
                     LinearGradient(
                         colors: [MPColors.primarySoft, MPColors.primaryMuted.opacity(0.5)],
@@ -154,10 +196,9 @@ struct RecipeCardView: View {
                             .font(.system(size: 28, weight: .light))
                             .foregroundColor(MPColors.primary.opacity(0.5))
                     )
+                    .frame(height: 120)
                 }
             }
-            .frame(height: 120)
-            .clipped()
 
             // Info
             VStack(alignment: .leading, spacing: MPSpacing.xs) {
@@ -188,7 +229,10 @@ struct RecipeCardView: View {
                 }
             }
             .padding(MPSpacing.md)
+
+            Spacer(minLength: 0)
         }
+        .frame(height: 200)
         .background(MPAdaptiveColors.surface(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
         .shadow(color: MPColors.shadow, radius: 6, x: 0, y: 2)
