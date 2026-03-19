@@ -2,12 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct SuggestionsView: View {
+    var onSelectRecipe: ((Recipe) -> Void)? = nil
+
     @State private var viewModel = SuggestionsViewModel()
     @Query(sort: \Recipe.name) private var recipes: [Recipe]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var addedToShoppingRecipeIds: Set<UUID> = []
+    @State private var plannedRecipeIds: Set<UUID> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -292,6 +295,35 @@ struct SuggestionsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
                     }
                     .disabled(alreadyAdded)
+                }
+
+                // Plan this meal button (only when accessed from AddMealSheet)
+                if let onSelectRecipe = onSelectRecipe {
+                    let alreadyPlanned = plannedRecipeIds.contains(match.recipe.id)
+                    Button(action: {
+                        // Add missing ingredients to shopping list automatically
+                        if !match.missingIngredients.isEmpty && !addedToShoppingRecipeIds.contains(match.recipe.id) {
+                            viewModel.addMissingToShoppingList(match.missingIngredients, context: modelContext)
+                            addedToShoppingRecipeIds.insert(match.recipe.id)
+                        }
+                        withAnimation {
+                            plannedRecipeIds.insert(match.recipe.id)
+                        }
+                        onSelectRecipe(match.recipe)
+                    }) {
+                        HStack(spacing: MPSpacing.sm) {
+                            Image(systemName: alreadyPlanned ? "checkmark.circle.fill" : "calendar.badge.plus")
+                                .font(.system(size: 13, weight: .medium))
+                            Text(alreadyPlanned ? "Added to plan" : "Plan this meal")
+                                .font(MPTypography.caption(.semibold))
+                        }
+                        .foregroundColor(alreadyPlanned ? MPColors.primary : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, MPSpacing.sm)
+                        .background(alreadyPlanned ? MPColors.primarySoft : MPColors.primaryLight)
+                        .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+                    }
+                    .disabled(alreadyPlanned)
                 }
             }
             .padding(MPSpacing.lg)

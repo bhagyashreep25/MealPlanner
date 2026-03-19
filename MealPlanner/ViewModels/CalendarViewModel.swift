@@ -4,14 +4,8 @@ import SwiftData
 @Observable
 class CalendarViewModel {
     var selectedDate: Date = Date()
-    var viewMode: CalendarViewMode = .day
     var showingRecipePicker = false
     var selectedMealSlot: MealSlot? = nil
-
-    enum CalendarViewMode: String, CaseIterable {
-        case day = "Day"
-        case week = "Week"
-    }
 
     struct MealSlot: Equatable {
         let date: Date
@@ -31,20 +25,6 @@ class CalendarViewModel {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         return formatter.string(from: selectedDate)
-    }
-
-    var weekTitle: String {
-        let dates = currentWeekDates
-        guard let first = dates.first, let last = dates.last else { return "" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        let endFormatter = DateFormatter()
-        if calendar.component(.month, from: first) == calendar.component(.month, from: last) {
-            endFormatter.dateFormat = "d, yyyy"
-        } else {
-            endFormatter.dateFormat = "MMM d, yyyy"
-        }
-        return "\(formatter.string(from: first)) – \(endFormatter.string(from: last))"
     }
 
     func dayName(for date: Date) -> String {
@@ -69,6 +49,12 @@ class CalendarViewModel {
 
     // MARK: - Navigation
 
+    func selectDate(_ date: Date) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedDate = date
+        }
+    }
+
     func goToPreviousDay() {
         withAnimation(.easeInOut(duration: 0.25)) {
             selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
@@ -78,18 +64,6 @@ class CalendarViewModel {
     func goToNextDay() {
         withAnimation(.easeInOut(duration: 0.25)) {
             selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-        }
-    }
-
-    func goToPreviousWeek() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedDate = calendar.date(byAdding: .weekOfYear, value: -1, to: selectedDate) ?? selectedDate
-        }
-    }
-
-    func goToNextWeek() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedDate = calendar.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
         }
     }
 

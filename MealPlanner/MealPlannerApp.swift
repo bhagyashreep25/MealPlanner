@@ -6,7 +6,7 @@ struct MealPlannerApp: App {
     var body: some Scene {
         WindowGroup {
             NavigationStack {
-                MainTabView()
+                CalendarView()
             }
         }
         .modelContainer(for: [
