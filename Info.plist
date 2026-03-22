@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Gloock-Regular.ttf</string>
+		<string>SchibstedGrotesk-Variable.ttf</string>
+		<string>SchibstedGrotesk-Bold.ttf</string>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MealPlanner needs access to your photo library to add photos to your recipes and scan recipe images.</string>
+</dict>
+</plist>

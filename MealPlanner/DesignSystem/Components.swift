@@ -18,19 +18,19 @@ struct MPButton: View {
             HStack(spacing: MPSpacing.sm) {
                 if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15, weight: .medium))
                 }
                 Text(title)
                     .font(MPTypography.callout(.semibold))
             }
             .padding(.horizontal, MPSpacing.xl)
-            .padding(.vertical, MPSpacing.md)
+            .padding(.vertical, MPSpacing.md + 2)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
             .foregroundColor(foregroundColor)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: MPRadius.xl))
+            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
             .overlay(
-                RoundedRectangle(cornerRadius: MPRadius.xl)
+                RoundedRectangle(cornerRadius: MPRadius.md)
                     .stroke(borderColor, lineWidth: style == .outline ? 1.5 : 0)
             )
         }
@@ -39,10 +39,10 @@ struct MPButton: View {
 
     private var foregroundColor: Color {
         switch style {
-        case .primary: return .white
+        case .primary: return MPColors.onPrimary
         case .secondary: return MPColors.primary
         case .outline: return MPColors.primary
-        case .destructive: return .white
+        case .destructive: return MPColors.onPrimary
         case .ghost: return MPColors.primary
         }
     }
@@ -59,7 +59,7 @@ struct MPButton: View {
 
     private var borderColor: Color {
         switch style {
-        case .outline: return MPColors.primary.opacity(0.4)
+        case .outline: return MPColors.primary.opacity(0.3)
         default: return .clear
         }
     }
@@ -79,7 +79,7 @@ struct MPTextField: View {
         HStack(spacing: MPSpacing.md) {
             if let icon = icon {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundColor(isFocused ? MPColors.primary : MPColors.textTertiary)
             }
             TextField(placeholder, text: $text)
@@ -93,7 +93,7 @@ struct MPTextField: View {
         .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: MPRadius.md)
-                .stroke(isFocused ? MPColors.primary : Color.clear, lineWidth: 1.5)
+                .stroke(isFocused ? MPColors.primary.opacity(0.5) : MPColors.divider.opacity(0.6), lineWidth: 1)
         )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
@@ -114,11 +114,11 @@ struct MPNumberField: View {
         HStack(spacing: MPSpacing.md) {
             if let icon = icon {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundColor(isFocused ? MPColors.primary : MPColors.textTertiary)
             }
             TextField(placeholder, text: $textValue)
-                .font(MPTypography.body())
+                .font(MPTypography.cardo())
                 .keyboardType(.numberPad)
                 .focused($isFocused)
                 .onChange(of: textValue) { _, newValue in
@@ -136,11 +136,17 @@ struct MPNumberField: View {
         .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: MPRadius.md)
-                .stroke(isFocused ? MPColors.primary : Color.clear, lineWidth: 1.5)
+                .stroke(isFocused ? MPColors.primary.opacity(0.5) : MPColors.divider.opacity(0.6), lineWidth: 1)
         )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .onAppear {
             textValue = value > 0 ? "\(value)" : ""
+        }
+        .onChange(of: value) { _, newValue in
+            let expected = newValue > 0 ? "\(newValue)" : ""
+            if textValue != expected {
+                textValue = expected
+            }
         }
     }
 }
@@ -159,7 +165,11 @@ struct MPCard<Content: View>: View {
         content()
             .background(MPAdaptiveColors.surface(for: colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
-            .shadow(color: MPColors.shadow, radius: 8, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.lg)
+                    .stroke(MPColors.divider.opacity(0.5), lineWidth: 0.5)
+            )
+            .shadow(color: MPColors.shadow, radius: 6, x: 0, y: 2)
     }
 }
 
@@ -174,10 +184,14 @@ struct MPChip: View {
         Text(label)
             .font(MPTypography.caption(.medium))
             .padding(.horizontal, MPSpacing.md)
-            .padding(.vertical, MPSpacing.xs + 2)
-            .foregroundColor(isSelected ? .white : MPColors.primary)
-            .background(isSelected ? MPColors.primary : MPColors.primarySoft)
-            .clipShape(Capsule())
+            .padding(.vertical, MPSpacing.xs + 3)
+            .foregroundColor(isSelected ? MPColors.onPrimary : MPColors.textSecondary)
+            .background(isSelected ? MPColors.primary : MPColors.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.sm)
+                    .stroke(isSelected ? Color.clear : MPColors.divider, lineWidth: 0.5)
+            )
             .onTapGesture {
                 onTap?()
             }
@@ -203,10 +217,14 @@ struct MPRemovableChip: View {
             }
         }
         .padding(.horizontal, MPSpacing.md)
-        .padding(.vertical, MPSpacing.xs + 2)
-        .foregroundColor(MPColors.primary)
-        .background(MPColors.primarySoft)
-        .clipShape(Capsule())
+        .padding(.vertical, MPSpacing.xs + 3)
+        .foregroundColor(MPColors.textSecondary)
+        .background(MPColors.surfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+        .overlay(
+            RoundedRectangle(cornerRadius: MPRadius.sm)
+                .stroke(MPColors.divider, lineWidth: 0.5)
+        )
     }
 }
 
@@ -216,18 +234,19 @@ struct MPSectionHeader: View {
     let title: String
     var action: String? = nil
     var onAction: (() -> Void)? = nil
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack {
             Text(title)
                 .font(MPTypography.headline())
-                .foregroundColor(MPColors.textPrimary)
+                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
             Spacer()
             if let action = action {
                 Button(action: { onAction?() }) {
                     Text(action)
                         .font(MPTypography.callout(.medium))
-                        .foregroundColor(MPColors.primary)
+                        .foregroundColor(MPColors.accent)
                 }
             }
         }
@@ -242,20 +261,21 @@ struct MPEmptyState: View {
     let subtitle: String
     var buttonTitle: String? = nil
     var onAction: (() -> Void)? = nil
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: MPSpacing.lg) {
             Image(systemName: icon)
-                .font(.system(size: 56, weight: .light))
+                .font(.system(size: 48, weight: .ultraLight))
                 .foregroundColor(MPColors.primaryMuted)
 
             VStack(spacing: MPSpacing.sm) {
                 Text(title)
                     .font(MPTypography.title2())
-                    .foregroundColor(MPColors.textPrimary)
+                    .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
                 Text(subtitle)
                     .font(MPTypography.body())
-                    .foregroundColor(MPColors.textSecondary)
+                    .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
                     .multilineTextAlignment(.center)
             }
 
@@ -277,12 +297,12 @@ struct MPFloatingButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(MPColors.onPrimary)
                 .frame(width: 56, height: 56)
                 .background(MPColors.primary)
                 .clipShape(Circle())
-                .shadow(color: MPColors.primary.opacity(0.35), radius: 12, x: 0, y: 4)
+                .shadow(color: MPColors.primary.opacity(0.25), radius: 10, x: 0, y: 4)
         }
     }
 }
@@ -292,13 +312,14 @@ struct MPFloatingButton: View {
 struct MPSearchBar: View {
     @Binding var text: String
     var placeholder: String = "Search recipes..."
+    var cornerRadius: CGFloat = MPRadius.xl
 
     @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: MPSpacing.md) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundColor(isFocused ? MPColors.primary : MPColors.textTertiary)
 
             TextField(placeholder, text: $text)
@@ -308,7 +329,7 @@ struct MPSearchBar: View {
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 15))
                         .foregroundColor(MPColors.textTertiary)
                 }
             }
@@ -316,7 +337,11 @@ struct MPSearchBar: View {
         .padding(.horizontal, MPSpacing.lg)
         .padding(.vertical, MPSpacing.md)
         .background(MPColors.surfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: MPRadius.xl))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(isFocused ? MPColors.primary.opacity(0.4) : MPColors.divider.opacity(0.6), lineWidth: 1)
+        )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }

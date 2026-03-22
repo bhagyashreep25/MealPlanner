@@ -372,7 +372,7 @@ actor RecipeImportService {
 
     // MARK: - OCR Text Parsing
 
-    private func parseOCRText(_ text: String) -> ParsedRecipe {
+    func parseOCRText(_ text: String) -> ParsedRecipe {
         var parsed = ParsedRecipe()
         let lines = text.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -392,7 +392,7 @@ actor RecipeImportService {
                                 "method", "methods", "preparation", "how to make",
                                 "how to cook", "procedure", "steps"]
 
-        for line in lines.dropFirst() {
+        parsingLoop: for line in lines.dropFirst() {
             let lower = line.lowercased()
                 .trimmingCharacters(in: .punctuationCharacters)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -430,9 +430,9 @@ actor RecipeImportService {
                 }
 
             case .directions:
-                // Skip "Notes" section header and everything after
+                // Stop parsing at "Notes" / "Nutrition" sections
                 if line.count < 20 && (lower == "notes" || lower == "note" || lower.hasPrefix("nutrition")) {
-                    break
+                    break parsingLoop
                 }
                 if line.count > 3 {
                     let cleaned = cleanStepText(line)
@@ -501,7 +501,7 @@ actor RecipeImportService {
 
     // MARK: - Helpers
 
-    private func splitIngredient(_ raw: String) -> (name: String, quantity: String) {
+    func splitIngredient(_ raw: String) -> (name: String, quantity: String) {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: #"^[\-\•\*]+\s*"#, with: "", options: .regularExpression)
 
@@ -518,12 +518,12 @@ actor RecipeImportService {
         return (name: trimmed, quantity: "")
     }
 
-    private func extractNumber(from string: String) -> Int? {
+    func extractNumber(from string: String) -> Int? {
         let digits = string.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         return Int(digits)
     }
 
-    private func parseDuration(_ value: Any?) -> Int {
+    func parseDuration(_ value: Any?) -> Int {
         guard let str = value as? String else { return 0 }
         var minutes = 0
         if let hourMatch = str.range(of: #"(\d+)H"#, options: .regularExpression) {
@@ -537,13 +537,13 @@ actor RecipeImportService {
         return minutes
     }
 
-    private func stripHTML(_ string: String) -> String {
+    func stripHTML(_ string: String) -> String {
         string.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
     }
 
     // MARK: - HTML Entity Decoding
 
-    private func decodeHTML(_ string: String) -> String {
+    func decodeHTML(_ string: String) -> String {
         var result = string
 
         // Numeric entities (&#189; &#8531;)

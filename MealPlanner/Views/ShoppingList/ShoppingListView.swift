@@ -17,7 +17,7 @@ struct ShoppingListView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
                 header
                     .padding(.horizontal, MPSpacing.xl)
@@ -25,11 +25,9 @@ struct ShoppingListView: View {
 
                 if shoppingItems.isEmpty {
                     Spacer()
-                    MPEmptyState(
-                        icon: "cart",
-                        title: "Shopping list is empty",
-                        subtitle: "Tap the buttons below to get started"
-                    )
+                    Text("Tap + to add")
+                        .font(MPTypography.callout())
+                        .foregroundColor(MPColors.textTertiary)
                     Spacer()
                 } else {
                     ScrollView {
@@ -40,13 +38,15 @@ struct ShoppingListView: View {
                         }
                         .padding(.horizontal, MPSpacing.xl)
                         .padding(.top, MPSpacing.lg)
-                        .padding(.bottom, 140)
+                        .padding(.bottom, 120)
                     }
                 }
             }
 
-            // Bottom action buttons
-            bottomButtons
+            // FAB
+            addFAB
+                .padding(.trailing, MPSpacing.xl)
+                .padding(.bottom, 100)
         }
         .background(MPAdaptiveColors.background(for: colorScheme))
         .sheet(isPresented: $viewModel.showingAddItem) {
@@ -57,8 +57,9 @@ struct ShoppingListView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: MPSpacing.xs) {
+        VStack(spacing: MPSpacing.xs) {
             HStack {
+                Spacer()
                 Text("Shopping List")
                     .font(MPTypography.largeTitle())
                     .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
@@ -83,63 +84,24 @@ struct ShoppingListView: View {
             if !shoppingItems.isEmpty {
                 Text("\(uncheckedCount) item\(uncheckedCount == 1 ? "" : "s") remaining")
                     .font(MPTypography.callout())
-                    .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
+                    .foregroundColor(MPColors.textWarm)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Bottom Buttons
 
-    private var bottomButtons: some View {
-        HStack(spacing: MPSpacing.md) {
-            Button(action: { viewModel.showingAddItem = true }) {
-                HStack(spacing: MPSpacing.sm) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Item")
-                        .font(MPTypography.callout(.semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, MPSpacing.md + 2)
+    private var addFAB: some View {
+        Button(action: { viewModel.showingAddItem = true }) {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(MPColors.onPrimary)
+                .frame(width: 56, height: 56)
                 .background(MPColors.primary)
-                .clipShape(RoundedRectangle(cornerRadius: MPRadius.xl))
-            }
-
-            Button(action: {
-                viewModel.generateFromMealPlan(
-                    mealPlans: mealPlans,
-                    existingItems: shoppingItems,
-                    context: modelContext
-                )
-            }) {
-                HStack(spacing: MPSpacing.sm) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("From Plan")
-                        .font(MPTypography.callout(.semibold))
-                }
-                .foregroundColor(MPColors.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, MPSpacing.md + 2)
-                .background(MPColors.primarySoft)
-                .clipShape(RoundedRectangle(cornerRadius: MPRadius.xl))
-                .overlay(
-                    RoundedRectangle(cornerRadius: MPRadius.xl)
-                        .stroke(MPColors.primary.opacity(0.3), lineWidth: 1)
-                )
-            }
+                .clipShape(Circle())
+                .shadow(color: MPColors.primary.opacity(0.3), radius: 10, x: 0, y: 4)
         }
-        .padding(.horizontal, MPSpacing.xl)
-        .padding(.top, MPSpacing.md)
-        .padding(.bottom, 72)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -3)
-                .ignoresSafeArea(edges: .bottom)
-        )
     }
 
     // MARK: - Category Section
@@ -179,7 +141,11 @@ struct ShoppingListView: View {
             }
             .background(MPAdaptiveColors.surface(for: colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
-            .shadow(color: MPColors.shadow, radius: 4, x: 0, y: 1)
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.md)
+                    .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
         }
     }
 
@@ -198,12 +164,14 @@ struct ShoppingListView: View {
 
                     if item.isChecked {
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(MPColors.primary)
+                            .fill(
+                                MPColors.primary
+                            )
                             .frame(width: 22, height: 22)
 
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(MPColors.onPrimary)
                     }
                 }
             }

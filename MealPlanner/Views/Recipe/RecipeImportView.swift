@@ -171,7 +171,7 @@ struct RecipeImportView: View {
                     Text(selectedImage == nil ? "Select Photo" : "Choose Different Photo")
                         .font(MPTypography.callout(.semibold))
                 }
-                .foregroundColor(.white)
+                .foregroundColor(MPColors.onPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, MPSpacing.md + 2)
                 .background(MPColors.primary)
@@ -268,7 +268,7 @@ struct RecipeImportView: View {
                             HStack(alignment: .top, spacing: MPSpacing.sm) {
                                 Text("\(index + 1)")
                                     .font(MPTypography.caption(.bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(MPColors.onPrimary)
                                     .frame(width: 22, height: 22)
                                     .background(MPColors.primary)
                                     .clipShape(Circle())
@@ -337,7 +337,7 @@ struct RecipeImportView: View {
                                         Spacer()
                                         Image(systemName: "pencil.circle.fill")
                                             .font(.system(size: 28))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(MPColors.onPrimary)
                                             .shadow(radius: 4)
                                             .padding(MPSpacing.md)
                                     }
@@ -347,14 +347,18 @@ struct RecipeImportView: View {
                         VStack(spacing: MPSpacing.md) {
                             Image(systemName: "camera")
                                 .font(.system(size: 32, weight: .light))
-                                .foregroundColor(MPColors.primary)
+                                .foregroundColor(MPColors.textWarm)
                             Text("Add Photo")
                                 .font(MPTypography.callout(.medium))
-                                .foregroundColor(MPColors.primary)
+                                .foregroundColor(MPColors.textWarm)
                         }
                         .frame(height: 180)
                         .frame(maxWidth: .infinity)
-                        .background(MPColors.primarySoft.opacity(0.5))
+                        .background(MPAdaptiveColors.surface(for: colorScheme))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MPRadius.lg)
+                                .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+                        )
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))

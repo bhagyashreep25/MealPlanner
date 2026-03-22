@@ -16,27 +16,57 @@ class CalendarViewModel {
 
     private var calendar: Calendar { Calendar.current }
 
+    // Cached formatters for performance
+    private static let dayTitleFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"; return f
+    }()
+    private static let dayOfWeekFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEEE"; return f
+    }()
+    private static let shortDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "EEE"; return f
+    }()
+    private static let shortMonthFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM"; return f
+    }()
+    private static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"; return f
+    }()
+    private static let dayNumberFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "d"; return f
+    }()
+
     var currentWeekDates: [Date] {
         let start = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
         return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
     }
 
     var dayTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: selectedDate)
+        Self.dayTitleFormatter.string(from: selectedDate)
+    }
+
+    var dayOfWeek: String {
+        Self.dayOfWeekFormatter.string(from: selectedDate)
+    }
+
+    var shortDayOfWeek: String {
+        Self.shortDayFormatter.string(from: selectedDate)
+    }
+
+    var shortMonth: String {
+        Self.shortMonthFormatter.string(from: selectedDate)
+    }
+
+    var monthAndYear: String {
+        Self.monthYearFormatter.string(from: selectedDate)
     }
 
     func dayName(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date)
+        Self.shortDayFormatter.string(from: date)
     }
 
     func dayNumber(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: date)
+        Self.dayNumberFormatter.string(from: date)
     }
 
     func isToday(_ date: Date) -> Bool {

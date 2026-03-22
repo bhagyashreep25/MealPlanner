@@ -11,6 +11,7 @@ final class MealPlan {
     var id: UUID
     var date: Date
     var mealType: MealType
+    @Relationship(deleteRule: .nullify)
     var recipe: Recipe?
 
     init(date: Date, mealType: MealType, recipe: Recipe? = nil) {

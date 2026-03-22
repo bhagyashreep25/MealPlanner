@@ -8,24 +8,98 @@ struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var drawerExpanded = false
-    @State private var showingRecipeList = false
-    @State private var showingShoppingList = false
     @State private var recipeViewModel = RecipeViewModel()
+    @State private var longPressedMeal: MealPlan? = nil
+    @State private var longPressedMealType: MealType? = nil
+    @State private var showingMealActions = false
+    @State private var selectedTab: BottomTab = .plan
+
+    private enum BottomTab: Int, CaseIterable {
+        case plan = 0
+        case recipes = 1
+        case shopping = 2
+
+        var label: String {
+            switch self {
+            case .plan: return "Plan"
+            case .recipes: return "Recipes"
+            case .shopping: return "List"
+            }
+        }
+
+        var activeIcon: String {
+            switch self {
+            case .plan: return "nav-plan-active"
+            case .recipes: return "nav-recipes-active"
+            case .shopping: return "nav-list-active"
+            }
+        }
+
+        var inactiveIcon: String {
+            switch self {
+            case .plan: return "nav-plan-inactive"
+            case .recipes: return "nav-recipes-inactive"
+            case .shopping: return "nav-list-inactive"
+            }
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                calendarHeader
-                dateStrip
-                dayView
-                Spacer(minLength: 0)
+            // Tab content
+            Group {
+                switch selectedTab {
+                case .plan:
+                    planContent
+                case .recipes:
+                    RecipeListView(viewModel: recipeViewModel)
+                        .navigationBarBackButtonHidden(true)
+                case .shopping:
+                    ShoppingListView()
+                        .navigationBarBackButtonHidden(true)
+                }
             }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 60)
+                    .onEnded { value in
+                        let horizontal = abs(value.translation.width)
+                        let vertical = abs(value.translation.height)
+                        guard horizontal > vertical * 1.5 else { return }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            if value.translation.width < -60 {
+                                if let next = BottomTab(rawValue: selectedTab.rawValue + 1) {
+                                    selectedTab = next
+                                }
+                            } else if value.translation.width > 60 {
+                                if let prev = BottomTab(rawValue: selectedTab.rawValue - 1) {
+                                    selectedTab = prev
+                                }
+                            }
+                        }
+                    }
+            )
 
-            drawerView
+            bottomNavBar
         }
         .background(MPAdaptiveColors.background(for: colorScheme))
         .navigationBarHidden(true)
+        .confirmationDialog("", isPresented: $showingMealActions, titleVisibility: .hidden) {
+            Button {
+                if let mealType = longPressedMealType {
+                    viewModel.selectSlot(date: viewModel.selectedDate, mealType: mealType)
+                }
+            } label: {
+                Label("Change Recipe", systemImage: "arrow.triangle.swap")
+            }
+            Button(role: .destructive) {
+                if let meal = longPressedMeal {
+                    viewModel.removeMeal(meal, context: modelContext)
+                }
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .sheet(isPresented: $viewModel.showingRecipePicker) {
             AddMealSheet(
                 recipes: recipes,
@@ -37,118 +111,83 @@ struct CalendarView: View {
                 }
             )
         }
-        .navigationDestination(isPresented: $showingRecipeList) {
-            RecipeListView(viewModel: recipeViewModel)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { showingRecipeList = false }
-                            .foregroundColor(MPColors.primary)
-                    }
-                }
-                .navigationBarBackButtonHidden(true)
-        }
-        .navigationDestination(isPresented: $showingShoppingList) {
-            ShoppingListView()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { showingShoppingList = false }
-                            .foregroundColor(MPColors.primary)
-                    }
-                }
-                .navigationBarBackButtonHidden(true)
+    }
+
+    // MARK: - Plan Content
+
+    private var planContent: some View {
+        VStack(spacing: 0) {
+            calendarHeader
+            dayView
+            Spacer(minLength: 0)
         }
     }
 
     // MARK: - Header
 
     private var calendarHeader: some View {
-        VStack(alignment: .leading, spacing: MPSpacing.sm) {
-            Text("Meals")
-                .font(MPTypography.largeTitle())
-                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
-
+        VStack(spacing: MPSpacing.sm) {
+            // Navigation row: left arrow, date block, right arrow
             HStack {
-                Text(viewModel.dayTitle)
-                    .font(MPTypography.headline())
-                    .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
+                Button(action: { viewModel.goToPreviousDay() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(MPColors.textTertiary)
+                        .frame(width: 44, height: 44)
+                }
 
                 Spacer()
 
-                HStack(spacing: MPSpacing.lg) {
-                    Button(action: { viewModel.goToToday() }) {
-                        Text("Today")
-                            .font(MPTypography.caption(.semibold))
-                            .foregroundColor(MPColors.primary)
-                            .padding(.horizontal, MPSpacing.md)
-                            .padding(.vertical, MPSpacing.xs + 2)
-                            .background(MPColors.primarySoft)
-                            .clipShape(Capsule())
-                    }
+                dateBlock
 
-                    HStack(spacing: MPSpacing.sm) {
-                        Button(action: { viewModel.goToPreviousDay() }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(MPColors.primary)
-                        }
-                        Button(action: { viewModel.goToNextDay() }) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(MPColors.primary)
-                        }
-                    }
+                Spacer()
+
+                Button(action: { viewModel.goToNextDay() }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(MPColors.textTertiary)
+                        .frame(width: 44, height: 44)
                 }
             }
-        }
-        .padding(.horizontal, MPSpacing.xl)
-        .padding(.top, MPSpacing.md)
-    }
-
-    // MARK: - Date Strip
-
-    private var dateStrip: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: MPSpacing.md) {
-                    ForEach(viewModel.currentWeekDates, id: \.self) { date in
-                        dateStripItem(date)
-                            .id(date)
-                            .onTapGesture {
-                                viewModel.selectDate(date)
-                            }
-                    }
-                }
-                .padding(.horizontal, MPSpacing.xl)
-            }
-            .onChange(of: viewModel.selectedDate) { _, newDate in
-                withAnimation { proxy.scrollTo(newDate, anchor: .center) }
-            }
+            .padding(.horizontal, MPSpacing.xl)
         }
         .padding(.top, MPSpacing.lg)
-        .padding(.bottom, MPSpacing.sm)
+        .padding(.bottom, MPSpacing.md)
     }
 
-    private func dateStripItem(_ date: Date) -> some View {
-        let selected = viewModel.isSelected(date)
-        let today = viewModel.isToday(date)
+    // MARK: - Date Block (130×130 square, diagonal gradient)
 
-        return VStack(spacing: MPSpacing.xs) {
-            Text(viewModel.dayName(for: date))
-                .font(MPTypography.small(.medium))
-                .foregroundColor(
-                    selected ? MPColors.primary :
-                    today ? MPColors.primary :
-                    MPAdaptiveColors.textSecondary(for: colorScheme)
-                )
+    private var dateBlock: some View {
+        VStack(spacing: 0) {
+            Text(viewModel.shortDayOfWeek)
+                .font(MPTypography.body(.medium))
+                .foregroundColor(Color(hex: "E8E8E8"))
+                .tracking(2)
+                .textCase(.uppercase)
+                .padding(.top, MPSpacing.lg)
 
-            Text(viewModel.dayNumber(for: date))
-                .font(MPTypography.callout(selected ? .bold : .medium))
-                .foregroundColor(selected ? .white : today ? MPColors.primary : MPAdaptiveColors.textPrimary(for: colorScheme))
-                .frame(width: 36, height: 36)
-                .background(selected ? MPColors.primary : Color.clear)
-                .clipShape(Circle())
+            Text(viewModel.dayNumber(for: viewModel.selectedDate))
+                .font(MPTypography.gloock(48))
+                .foregroundColor(MPColors.onPrimary)
+                .padding(.vertical, -2)
+
+            Text(viewModel.shortMonth)
+                .font(MPTypography.body(.medium))
+                .foregroundColor(Color(hex: "E8E8E8"))
+                .tracking(2)
+                .textCase(.uppercase)
+                .padding(.bottom, MPSpacing.lg)
         }
-        .frame(width: 44)
+        .frame(width: 130, height: 130)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: "C96032"), Color(hex: "73351A")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
+        .shadow(color: Color(hex: "73351A").opacity(0.3), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Day View
@@ -156,247 +195,152 @@ struct CalendarView: View {
     private var dayView: some View {
         ScrollView {
             VStack(spacing: MPSpacing.xl) {
-                ForEach(MealType.allCases, id: \.self) { mealType in
-                    dayMealCard(mealType: mealType)
+                ForEach(Array(MealType.allCases.enumerated()), id: \.element) { index, mealType in
+                    dayMealCard(mealType: mealType, labelOnRight: index % 2 != 0)
                 }
             }
-            .padding(.horizontal, MPSpacing.xl)
             .padding(.top, MPSpacing.xl)
-            .padding(.bottom, 80)
+            .padding(.bottom, MPSpacing.xl)
         }
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    let horizontal = abs(value.translation.width)
-                    let vertical = abs(value.translation.height)
-                    guard horizontal > vertical else { return }
-                    if value.translation.width < -50 { viewModel.goToNextDay() }
-                    else if value.translation.width > 50 { viewModel.goToPreviousDay() }
-                }
-        )
     }
 
-    private func dayMealCard(mealType: MealType) -> some View {
+    private func dayMealCard(mealType: MealType, labelOnRight: Bool) -> some View {
         let meal = viewModel.mealForSlot(
             date: viewModel.selectedDate,
             mealType: mealType,
             from: mealPlans
         )
+        let hasMeal = meal?.recipe != nil
 
-        return VStack(alignment: .leading, spacing: 0) {
-            // Card header
-            HStack {
-                HStack(spacing: MPSpacing.sm) {
-                    Circle()
-                        .fill(mealType == .lunch ? MPColors.primaryLight : MPColors.primary)
-                        .frame(width: 10, height: 10)
-                    Text(mealType.rawValue)
-                        .font(MPTypography.headline())
-                        .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
+        return Button(action: {
+                if meal == nil {
+                    viewModel.selectSlot(date: viewModel.selectedDate, mealType: mealType)
                 }
-                Spacer()
-                if meal != nil {
-                    Menu {
-                        Button {
-                            viewModel.selectSlot(date: viewModel.selectedDate, mealType: mealType)
-                        } label: {
-                            Label("Change Recipe", systemImage: "arrow.triangle.swap")
-                        }
-                        Button(role: .destructive) {
-                            if let meal = meal {
-                                viewModel.removeMeal(meal, context: modelContext)
-                            }
-                        } label: {
-                            Label("Remove", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(MPColors.textTertiary)
-                            .padding(MPSpacing.sm)
+            }) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let meal = meal, let recipe = meal.recipe {
+                        filledCardContent(recipe: recipe, alignRight: !labelOnRight)
+                    } else {
+                        emptyCardContent()
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 230)
+                .background(MPAdaptiveColors.surface(for: colorScheme))
+                .overlay {
+                    GeometryReader { geo in
+                        verticalMealLabel(mealType.rawValue, onRight: labelOnRight)
+                            .position(
+                                x: labelOnRight ? geo.size.width - 20 : 20,
+                                y: geo.size.height / 2
+                            )
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
+                .overlay(
+                    RoundedRectangle(cornerRadius: MPRadius.lg)
+                        .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+                )
             }
-            .padding(.horizontal, MPSpacing.lg)
-            .padding(.top, MPSpacing.lg)
-            .padding(.bottom, MPSpacing.md)
+            .buttonStyle(.plain)
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .onEnded { _ in
+                        if hasMeal {
+                            longPressedMeal = meal
+                            longPressedMealType = mealType
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showingMealActions = true
+                            }
+                        }
+                    }
+            )
 
-            if let meal = meal, let recipe = meal.recipe {
-                dayFilledContent(recipe: recipe)
-            } else {
-                dayEmptyContent(mealType: mealType)
-            }
-        }
-        .background(MPAdaptiveColors.surface(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
-        .shadow(color: MPColors.shadow, radius: 8, x: 0, y: 2)
+        .padding(.horizontal, 30)
     }
 
-    private func dayFilledContent(recipe: Recipe) -> some View {
-        VStack(alignment: .leading, spacing: MPSpacing.md) {
+    // MARK: - Vertical Meal Label
+
+    private func verticalMealLabel(_ text: String, onRight: Bool) -> some View {
+        Text(text.uppercased())
+            .font(MPTypography.display())
+            .foregroundColor(Color(hex: "BE6E4B"))
+            .fixedSize()
+            .rotationEffect(.degrees(onRight ? 90 : -90))
+    }
+
+    // MARK: - Card Content
+
+    // alignRight: true = lunch (label overlaps left, content right-aligned in card)
+    // alignRight: false = dinner (label overlaps right, content left-aligned in card)
+    private func filledCardContent(recipe: Recipe, alignRight: Bool) -> some View {
+        VStack(alignment: alignRight ? .trailing : .leading, spacing: MPSpacing.sm) {
             if let photoData = recipe.photoData, let uiImage = UIImage(data: photoData) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(height: 160)
+                    .frame(height: 150)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
-                    .padding(.horizontal, MPSpacing.lg)
             }
 
-            VStack(alignment: .leading, spacing: MPSpacing.sm) {
-                Text(recipe.name)
-                    .font(MPTypography.title2(.semibold))
-                    .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
-
-                HStack(spacing: MPSpacing.lg) {
-                    if recipe.prepTime > 0 {
-                        Label("\(recipe.prepTime)m prep", systemImage: "clock")
-                            .font(MPTypography.caption())
-                            .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-                    if recipe.cookTime > 0 {
-                        Label("\(recipe.cookTime)m cook", systemImage: "flame")
-                            .font(MPTypography.caption())
-                            .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-                    if recipe.servings > 0 {
-                        Label("\(recipe.servings) servings", systemImage: "person.2")
-                            .font(MPTypography.caption())
-                            .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-                }
-
-                if !recipe.tags.isEmpty {
-                    HStack(spacing: MPSpacing.sm) {
-                        ForEach(recipe.tags.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(MPTypography.small(.medium))
-                                .foregroundColor(MPColors.primary)
-                                .padding(.horizontal, MPSpacing.sm)
-                                .padding(.vertical, 2)
-                                .background(MPColors.primarySoft)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-
-                if !recipe.ingredients.isEmpty {
-                    let preview = recipe.ingredients.prefix(4).map(\.name).joined(separator: ", ")
-                    let more = recipe.ingredients.count > 4 ? " +\(recipe.ingredients.count - 4) more" : ""
-                    Text(preview + more)
-                        .font(MPTypography.caption())
-                        .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                        .lineLimit(2)
-                }
-            }
-            .padding(.horizontal, MPSpacing.lg)
-            .padding(.bottom, MPSpacing.lg)
+            Text(recipe.name)
+                .font(MPTypography.gloock(20))
+                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
+                .lineLimit(2)
+                .multilineTextAlignment(alignRight ? .trailing : .leading)
         }
+        .padding(20)
+        .padding(.leading, alignRight ? 40 : 0)
+        .padding(.trailing, alignRight ? 0 : 40)
+        .frame(maxWidth: .infinity, alignment: alignRight ? .trailing : .leading)
     }
 
-    private func dayEmptyContent(mealType: MealType) -> some View {
-        Button(action: {
-            viewModel.selectSlot(date: viewModel.selectedDate, mealType: mealType)
-        }) {
-            VStack(spacing: MPSpacing.md) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 32, weight: .light))
-                    .foregroundColor(MPColors.primaryMuted)
-                Text("Plan your \(mealType.rawValue.lowercased())")
-                    .font(MPTypography.callout())
-                    .foregroundColor(MPColors.textTertiary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, MPSpacing.xxxl)
-        }
+    private func emptyCardContent() -> some View {
+        Text("Tap to add")
+            .font(MPTypography.callout())
+            .foregroundColor(MPColors.textTertiary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Drawer
+    // MARK: - Bottom Nav
 
-    private var drawerView: some View {
-        VStack(spacing: 0) {
-            // Handle
-            Button(action: {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    drawerExpanded.toggle()
+    private var bottomNavBar: some View {
+        HStack(spacing: 0) {
+            ForEach(BottomTab.allCases, id: \.self) { tab in
+                let isActive = selectedTab == tab
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                }) {
+                    VStack(spacing: 3) {
+                        Image(isActive ? tab.activeIcon : tab.inactiveIcon)
+                            .renderingMode(.original)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 28, height: 28)
+                        Text(tab.label)
+                            .font(MPTypography.caption(isActive ? .medium : .regular))
+                            .foregroundColor(isActive ? Color(hex: "73351A") : Color(hex: "999999"))
+                    }
                 }
-            }) {
-                VStack(spacing: MPSpacing.xs) {
-                    Capsule()
-                        .fill(MPColors.divider)
-                        .frame(width: 36, height: 4)
-                    Image(systemName: drawerExpanded ? "chevron.down" : "chevron.up")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(MPColors.textTertiary)
-                }
+                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
-                .padding(.top, MPSpacing.md)
-                .padding(.bottom, MPSpacing.sm)
-            }
-
-            // Expanded content
-            if drawerExpanded {
-                HStack(spacing: MPSpacing.lg) {
-                    drawerCard(
-                        icon: "book.fill",
-                        title: "Recipes",
-                        subtitle: "Browse cookbook"
-                    ) {
-                        showingRecipeList = true
-                    }
-
-                    drawerCard(
-                        icon: "cart.fill",
-                        title: "Shopping",
-                        subtitle: "View list"
-                    ) {
-                        showingShoppingList = true
-                    }
-                }
-                .padding(.horizontal, MPSpacing.xl)
-                .padding(.bottom, MPSpacing.lg)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, MPSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: MPRadius.lg)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: -4)
+            Rectangle()
+                .fill(Color(hex: "E0D8CB"))
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color(hex: "454545").opacity(0.08))
+                        .frame(height: 0.5)
+                }
+                .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: -4)
                 .ignoresSafeArea(edges: .bottom)
         )
-    }
-
-    private func drawerCard(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: MPSpacing.md) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(MPColors.primary)
-                    .frame(width: 40, height: 40)
-                    .background(MPColors.primarySoft)
-                    .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(MPTypography.callout(.semibold))
-                        .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
-                    Text(subtitle)
-                        .font(MPTypography.small())
-                        .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(MPColors.textTertiary)
-            }
-            .padding(MPSpacing.md)
-            .background(MPAdaptiveColors.surface(for: colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
-            .shadow(color: MPColors.shadow, radius: 4, x: 0, y: 1)
-        }
-        .buttonStyle(.plain)
     }
 }

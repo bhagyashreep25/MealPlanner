@@ -14,63 +14,46 @@ struct SuggestionsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            header
+            // Fixed top: lightbulb + text + input
+            fixedHeader
                 .padding(.horizontal, MPSpacing.xl)
                 .padding(.top, MPSpacing.md)
 
-            // Ingredient input
-            ingredientInputSection
-                .padding(.horizontal, MPSpacing.xl)
-                .padding(.top, MPSpacing.lg)
-
-            // Entered ingredients
+            // Entered ingredients chips
             if !viewModel.userIngredients.isEmpty {
                 enteredIngredients
                     .padding(.top, MPSpacing.md)
 
-                // Search button
-                MPButton(
-                    title: "Find Recipes",
-                    icon: "magnifyingglass",
-                    isFullWidth: true
-                ) {
-                    viewModel.findMatches(from: recipes)
-                }
-                .padding(.horizontal, MPSpacing.xl)
-                .padding(.top, MPSpacing.md)
+                // Find button — retro dashed style
+                findButton
+                    .padding(.horizontal, MPSpacing.xl)
+                    .padding(.top, MPSpacing.md)
             }
 
             // Results
             if viewModel.hasSearched {
                 resultsSection
-            } else if viewModel.userIngredients.isEmpty {
-                Spacer()
-                MPEmptyState(
-                    icon: "lightbulb",
-                    title: "What's in your kitchen?",
-                    subtitle: "Enter ingredients you have on hand and we'll suggest recipes you can make"
-                )
-                Spacer()
             } else {
                 Spacer()
             }
         }
         .background(MPAdaptiveColors.background(for: colorScheme))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Suggestions")
+                    .font(MPTypography.headline())
+                    .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
+            }
+        }
     }
 
-    // MARK: - Header
+    // MARK: - Fixed Header (input)
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: MPSpacing.xs) {
-            Text("Suggestions")
-                .font(MPTypography.largeTitle())
-                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
-            Text("Find recipes based on what you have")
-                .font(MPTypography.callout())
-                .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
+    private var fixedHeader: some View {
+        VStack(spacing: MPSpacing.lg) {
+            ingredientInputSection
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Ingredient Input
@@ -79,16 +62,22 @@ struct SuggestionsView: View {
         HStack(spacing: MPSpacing.sm) {
             MPTextField(
                 placeholder: "e.g. chicken, rice, tomato...",
-                text: $viewModel.ingredientInput,
-                icon: "leaf"
+                text: $viewModel.ingredientInput
             )
 
             Button(action: { viewModel.addIngredient() }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 32))
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(
-                        viewModel.ingredientInput.isEmpty ? MPColors.textTertiary : MPColors.primary
+                        viewModel.ingredientInput.isEmpty ? MPColors.textTertiary : MPColors.onPrimary
                     )
+                    .frame(width: 44, height: 44)
+                    .background(
+                        viewModel.ingredientInput.isEmpty
+                            ? AnyShapeStyle(MPColors.surfaceSecondary)
+                            : AnyShapeStyle(MPColors.primary)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
             }
             .disabled(viewModel.ingredientInput.isEmpty)
         }
@@ -103,7 +92,6 @@ struct SuggestionsView: View {
                     MPRemovableChip(label: ingredient) {
                         withAnimation {
                             viewModel.removeIngredient(ingredient)
-                            // Re-search when removing
                             if !viewModel.userIngredients.isEmpty {
                                 viewModel.findMatches(from: recipes)
                             }
@@ -127,6 +115,28 @@ struct SuggestionsView: View {
                 }
             }
             .padding(.horizontal, MPSpacing.xl)
+        }
+    }
+
+    // MARK: - Find Button (retro dashed)
+
+    private var findButton: some View {
+        Button(action: { viewModel.findMatches(from: recipes) }) {
+            HStack(spacing: MPSpacing.sm) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .medium))
+                Text("Find Recipes")
+                    .font(MPTypography.callout(.semibold))
+            }
+            .foregroundColor(MPColors.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, MPSpacing.md + 2)
+            .background(MPAdaptiveColors.surface(for: colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.md)
+                    .stroke(MPColors.primary, lineWidth: 1.5)
+            )
         }
     }
 
@@ -184,19 +194,19 @@ struct SuggestionsView: View {
                             .aspectRatio(contentMode: .fill)
                     } else {
                         LinearGradient(
-                            colors: [MPColors.primarySoft, MPColors.primaryMuted.opacity(0.5)],
+                            colors: [MPColors.surfaceSecondary, MPColors.primarySoft],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                         .overlay(
                             Image(systemName: "fork.knife")
                                 .font(.system(size: 16, weight: .light))
-                                .foregroundColor(MPColors.primary.opacity(0.5))
+                                .foregroundColor(MPColors.primaryMuted.opacity(0.5))
                         )
                     }
                 }
                 .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+                .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
 
                 VStack(alignment: .leading, spacing: MPSpacing.xs) {
                     Text(match.recipe.name)
@@ -217,7 +227,6 @@ struct SuggestionsView: View {
 
                 Spacer()
 
-                // Coverage percentage
                 coverageBadge(match.coveragePercent)
             }
             .padding(MPSpacing.lg)
@@ -225,34 +234,16 @@ struct SuggestionsView: View {
             Divider().foregroundColor(MPColors.divider)
 
             // Ingredient breakdown
-            VStack(alignment: .leading, spacing: MPSpacing.md) {
-                // What you have
-                if !match.matchedIngredients.isEmpty {
-                    VStack(alignment: .leading, spacing: MPSpacing.xs) {
-                        HStack(spacing: MPSpacing.xs) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(MPColors.primary)
-                            Text("You have (\(match.matchedIngredients.count))")
-                                .font(MPTypography.caption(.semibold))
-                                .foregroundColor(MPColors.primary)
-                        }
-                        Text(match.matchedIngredients.joined(separator: ", "))
-                            .font(MPTypography.caption())
-                            .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-                }
-
-                // What you need
+            VStack(alignment: .leading, spacing: MPSpacing.lg) {
                 if !match.missingIngredients.isEmpty {
-                    VStack(alignment: .leading, spacing: MPSpacing.xs) {
+                    VStack(alignment: .leading, spacing: MPSpacing.sm) {
                         HStack(spacing: MPSpacing.xs) {
                             Image(systemName: "cart.badge.plus")
                                 .font(.system(size: 12))
-                                .foregroundColor(MPColors.warning)
+                                .foregroundColor(MPColors.textSecondary)
                             Text("You need (\(match.missingIngredients.count))")
                                 .font(MPTypography.caption(.semibold))
-                                .foregroundColor(MPColors.warning)
+                                .foregroundColor(MPColors.textSecondary)
                         }
 
                         FlowLayout(spacing: MPSpacing.xs) {
@@ -267,70 +258,72 @@ struct SuggestionsView: View {
                                 }
                                 .padding(.horizontal, MPSpacing.sm)
                                 .padding(.vertical, 3)
-                                .background(MPColors.warning.opacity(0.1))
-                                .clipShape(Capsule())
-                                .foregroundColor(MPColors.warning)
+                                .background(MPColors.surfaceSecondary)
+                                .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+                                .foregroundColor(MPColors.textSecondary)
                             }
                         }
                     }
+                }
 
-                    // Add to shopping list button
-                    let alreadyAdded = addedToShoppingRecipeIds.contains(match.recipe.id)
+                // Action buttons side by side
+                let alreadyAdded = addedToShoppingRecipeIds.contains(match.recipe.id)
+                HStack(spacing: MPSpacing.sm) {
+                    // Secondary: Add to list (outline)
                     Button(action: {
                         viewModel.addMissingToShoppingList(match.missingIngredients, context: modelContext)
                         withAnimation {
                             addedToShoppingRecipeIds.insert(match.recipe.id)
                         }
                     }) {
-                        HStack(spacing: MPSpacing.sm) {
-                            Image(systemName: alreadyAdded ? "checkmark" : "cart.badge.plus")
-                                .font(.system(size: 13, weight: .medium))
-                            Text(alreadyAdded ? "Added to shopping list" : "Add missing to shopping list")
-                                .font(MPTypography.caption(.semibold))
-                        }
-                        .foregroundColor(alreadyAdded ? MPColors.primary : .white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, MPSpacing.sm)
-                        .background(alreadyAdded ? MPColors.primarySoft : MPColors.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+                        Text(alreadyAdded ? "Added" : "Add to List")
+                            .font(MPTypography.caption(.semibold))
+                            .foregroundColor(alreadyAdded ? MPColors.textTertiary : MPColors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, MPSpacing.sm)
+                            .background(Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: MPRadius.md)
+                                    .stroke(alreadyAdded ? MPColors.divider : MPColors.primary, lineWidth: 1.5)
+                            )
                     }
                     .disabled(alreadyAdded)
-                }
 
-                // Plan this meal button (only when accessed from AddMealSheet)
-                if let onSelectRecipe = onSelectRecipe {
-                    let alreadyPlanned = plannedRecipeIds.contains(match.recipe.id)
-                    Button(action: {
-                        // Add missing ingredients to shopping list automatically
-                        if !match.missingIngredients.isEmpty && !addedToShoppingRecipeIds.contains(match.recipe.id) {
-                            viewModel.addMissingToShoppingList(match.missingIngredients, context: modelContext)
-                            addedToShoppingRecipeIds.insert(match.recipe.id)
-                        }
-                        withAnimation {
-                            plannedRecipeIds.insert(match.recipe.id)
-                        }
-                        onSelectRecipe(match.recipe)
-                    }) {
-                        HStack(spacing: MPSpacing.sm) {
-                            Image(systemName: alreadyPlanned ? "checkmark.circle.fill" : "calendar.badge.plus")
-                                .font(.system(size: 13, weight: .medium))
-                            Text(alreadyPlanned ? "Added to plan" : "Plan this meal")
+                    // Primary: Plan this meal (solid)
+                    if let onSelectRecipe = onSelectRecipe {
+                        let alreadyPlanned = plannedRecipeIds.contains(match.recipe.id)
+                        Button(action: {
+                            if !match.missingIngredients.isEmpty && !addedToShoppingRecipeIds.contains(match.recipe.id) {
+                                viewModel.addMissingToShoppingList(match.missingIngredients, context: modelContext)
+                                addedToShoppingRecipeIds.insert(match.recipe.id)
+                            }
+                            withAnimation {
+                                plannedRecipeIds.insert(match.recipe.id)
+                            }
+                            onSelectRecipe(match.recipe)
+                        }) {
+                            Text(alreadyPlanned ? "Planned" : "Plan Meal")
                                 .font(MPTypography.caption(.semibold))
+                                .foregroundColor(alreadyPlanned ? MPColors.textTertiary : MPColors.onPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, MPSpacing.sm)
+                                .background(alreadyPlanned ? MPColors.primarySoft : MPColors.primary)
+                                .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
                         }
-                        .foregroundColor(alreadyPlanned ? MPColors.primary : .white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, MPSpacing.sm)
-                        .background(alreadyPlanned ? MPColors.primarySoft : MPColors.primaryLight)
-                        .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+                        .disabled(alreadyPlanned)
                     }
-                    .disabled(alreadyPlanned)
                 }
             }
             .padding(MPSpacing.lg)
         }
         .background(MPAdaptiveColors.surface(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
-        .shadow(color: MPColors.shadow, radius: 6, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: MPRadius.md)
+                .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
 
     // MARK: - Coverage Badge
@@ -354,12 +347,12 @@ struct SuggestionsView: View {
                     .rotationEffect(.degrees(-90))
 
                 Text("\(percent)%")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
             }
 
             Text("match")
-                .font(.system(size: 8, weight: .medium, design: .rounded))
+                .font(.system(size: 8, weight: .medium))
                 .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
         }
     }

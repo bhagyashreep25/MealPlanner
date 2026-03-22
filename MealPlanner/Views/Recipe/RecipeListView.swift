@@ -24,13 +24,14 @@ struct RecipeListView: View {
                     .padding(.top, MPSpacing.md)
 
                 // Search
-                MPSearchBar(text: $viewModel.searchText)
+                MPSearchBar(text: $viewModel.searchText, cornerRadius: MPRadius.md)
                     .padding(.horizontal, MPSpacing.xl)
                     .padding(.top, MPSpacing.lg)
 
                 // Category filter
                 categoryFilter
                     .padding(.top, MPSpacing.md)
+                    .padding(.bottom, MPSpacing.sm)
 
                 // Content
                 if filteredRecipes.isEmpty {
@@ -64,7 +65,7 @@ struct RecipeListView: View {
                         }
                         .padding(.horizontal, MPSpacing.xl)
                         .padding(.top, MPSpacing.lg)
-                        .padding(.bottom, 100)
+                        .padding(.bottom, 120)
                     }
                 }
             }
@@ -73,7 +74,7 @@ struct RecipeListView: View {
             // FAB with menu
             addMenu
                 .padding(.trailing, MPSpacing.xl)
-                .padding(.bottom, 90)
+                .padding(.bottom, 100)
         }
         .navigationDestination(for: Recipe.self) { recipe in
             RecipeDetailView(recipe: recipe, viewModel: viewModel)
@@ -115,12 +116,12 @@ struct RecipeListView: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(MPColors.onPrimary)
                 .frame(width: 56, height: 56)
                 .background(MPColors.primary)
                 .clipShape(Circle())
-                .shadow(color: MPColors.primary.opacity(0.35), radius: 12, x: 0, y: 4)
+                .shadow(color: MPColors.primary.opacity(0.3), radius: 10, x: 0, y: 4)
         }
     }
 
@@ -129,15 +130,15 @@ struct RecipeListView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: MPSpacing.xs) {
-            Text("My Recipes")
+        VStack(spacing: MPSpacing.xs) {
+            Text("Recipe Catalogue")
                 .font(MPTypography.largeTitle())
                 .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
             Text("\(recipes.count) recipe\(recipes.count == 1 ? "" : "s") in your cookbook")
                 .font(MPTypography.callout())
-                .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
+                .foregroundColor(MPColors.textWarm)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 
     private var categoryFilter: some View {
@@ -187,18 +188,19 @@ struct RecipeCardView: View {
                         .clipped()
                 } else {
                     LinearGradient(
-                        colors: [MPColors.primarySoft, MPColors.primaryMuted.opacity(0.5)],
+                        colors: [MPColors.surfaceSecondary, MPColors.divider],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
+                    .frame(height: 120)
                     .overlay(
                         Image(systemName: "fork.knife")
-                            .font(.system(size: 28, weight: .light))
-                            .foregroundColor(MPColors.primary.opacity(0.5))
+                            .font(.system(size: 28, weight: .ultraLight))
+                            .foregroundColor(MPColors.textWarm.opacity(0.4))
                     )
-                    .frame(height: 120)
                 }
             }
+            .frame(height: 120)
 
             // Info
             VStack(alignment: .leading, spacing: MPSpacing.xs) {
@@ -207,35 +209,26 @@ struct RecipeCardView: View {
                     .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
                     .lineLimit(2)
 
-                HStack(spacing: MPSpacing.xs) {
-                    if recipe.totalTime > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 10))
-                            Text(recipe.formattedTotalTime)
-                                .font(MPTypography.small())
-                        }
-                        .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-
-                    if !recipe.tags.isEmpty {
-                        Text("·")
-                            .foregroundColor(MPColors.textTertiary)
-                        Text(recipe.tags.first ?? "")
-                            .font(MPTypography.small(.medium))
-                            .foregroundColor(MPColors.primary)
-                            .lineLimit(1)
-                    }
+                if !recipe.tags.isEmpty {
+                    Text(recipe.tags.prefix(2).joined(separator: " · "))
+                        .font(MPTypography.small(.medium))
+                        .foregroundColor(MPColors.textSecondary)
+                        .lineLimit(1)
                 }
             }
-            .padding(MPSpacing.md)
+            .padding(.horizontal, MPSpacing.md)
+            .padding(.vertical, MPSpacing.sm)
 
             Spacer(minLength: 0)
         }
-        .frame(height: 200)
+        .frame(height: 190)
         .background(MPAdaptiveColors.surface(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: MPRadius.lg))
-        .shadow(color: MPColors.shadow, radius: 6, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: MPRadius.md)
+                .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 }
 

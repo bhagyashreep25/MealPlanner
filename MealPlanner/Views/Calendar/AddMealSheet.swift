@@ -10,10 +10,12 @@ struct AddMealSheet: View {
 
     @State private var searchText: String = ""
     @State private var showingSuggestions = false
-    @State private var showingAddManually = false
-    @State private var showingImportURL = false
-    @State private var showingImportPhoto = false
     @State private var recipeViewModel = RecipeViewModel()
+
+    private let columns = [
+        GridItem(.flexible(), spacing: MPSpacing.md),
+        GridItem(.flexible(), spacing: MPSpacing.md)
+    ]
 
     private var filteredRecipes: [Recipe] {
         if searchText.isEmpty { return recipes }
@@ -23,23 +25,12 @@ struct AddMealSheet: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
-                    // Search bar + AI suggestions icon
-                    HStack(spacing: MPSpacing.sm) {
-                        MPSearchBar(text: $searchText, placeholder: "Search recipes...")
-
-                        Button(action: { showingSuggestions = true }) {
-                            Image(systemName: "wand.and.stars")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(MPColors.primary)
-                                .frame(width: 44, height: 44)
-                                .background(MPColors.primarySoft)
-                                .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
-                        }
-                    }
-                    .padding(.horizontal, MPSpacing.xl)
-                    .padding(.top, MPSpacing.md)
+                    // Search bar
+                    MPSearchBar(text: $searchText, placeholder: "Search recipes...", cornerRadius: MPRadius.md)
+                        .padding(.horizontal, MPSpacing.xl)
+                        .padding(.top, MPSpacing.md)
 
                     if filteredRecipes.isEmpty {
                         Spacer()
@@ -47,152 +38,135 @@ struct AddMealSheet: View {
                             icon: "book.closed",
                             title: recipes.isEmpty ? "No recipes yet" : "No matches",
                             subtitle: recipes.isEmpty
-                                ? "Tap + to add your first recipe"
+                                ? "Add recipes from the Recipes tab"
                                 : "Try a different search term"
                         )
                         Spacer()
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: MPSpacing.sm) {
+                            LazyVGrid(columns: columns, spacing: MPSpacing.md) {
                                 ForEach(filteredRecipes) { recipe in
-                                    Button(action: { onSelect(recipe) }) {
-                                        recipeRow(recipe)
-                                    }
-                                    .buttonStyle(.plain)
+                                    recipeCard(recipe)
                                 }
                             }
                             .padding(.horizontal, MPSpacing.xl)
                             .padding(.top, MPSpacing.md)
-                            .padding(.bottom, MPSpacing.xxxl + 60)
+                            .padding(.bottom, 80)
                         }
                     }
                 }
 
-                // FAB for adding new recipes
-                addMenu
-                    .padding(.trailing, MPSpacing.xl)
-                    .padding(.bottom, MPSpacing.xl)
+                // Suggestions button — fixed at bottom
+                suggestionsButton
+                    .padding(.horizontal, MPSpacing.xl)
+                    .padding(.top, 6)
+                    .padding(.bottom, MPSpacing.md)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Rectangle()
+                            .fill(MPAdaptiveColors.background(for: colorScheme))
+                            .padding(.bottom, -100)
+                            .ignoresSafeArea(edges: .bottom)
+                    )
             }
             .background(MPAdaptiveColors.background(for: colorScheme))
-            .navigationTitle("Add Meal")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(MPColors.textSecondary)
+                ToolbarItem(placement: .principal) {
+                    Text("Add Meal")
+                        .font(MPTypography.headline())
+                        .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(MPColors.textWarm)
+                    }
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $showingSuggestions) {
                 SuggestionsView(onSelectRecipe: { recipe in
                     onSelect(recipe)
                 })
             }
-            .sheet(isPresented: $showingAddManually) {
-                RecipeFormView(viewModel: recipeViewModel)
-            }
-            .sheet(isPresented: $showingImportURL) {
-                RecipeImportView(viewModel: recipeViewModel, importMode: .url)
-            }
-            .sheet(isPresented: $showingImportPhoto) {
-                RecipeImportView(viewModel: recipeViewModel, importMode: .photo)
-            }
         }
     }
 
-    // MARK: - Add Menu (FAB)
+    // MARK: - Suggestions Button
 
-    private var addMenu: some View {
-        Menu {
-            Button {
-                showingAddManually = true
-            } label: {
-                Label("Add Manually", systemImage: "square.and.pencil")
+    private var suggestionsButton: some View {
+        Button(action: { showingSuggestions = true }) {
+            HStack(spacing: MPSpacing.sm) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .medium))
+                Text("Get Suggestions")
+                    .font(MPTypography.callout(.semibold))
             }
-
-            Button {
-                showingImportURL = true
-            } label: {
-                Label("Import from URL", systemImage: "link")
-            }
-
-            Button {
-                showingImportPhoto = true
-            } label: {
-                Label("Scan from Photo", systemImage: "camera")
-            }
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(MPColors.primary)
-                .clipShape(Circle())
-                .shadow(color: MPColors.primary.opacity(0.35), radius: 12, x: 0, y: 4)
+            .foregroundColor(MPColors.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, MPSpacing.md + 2)
+            .background(MPAdaptiveColors.surface(for: colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.md)
+                    .stroke(MPColors.primary, lineWidth: 1.5)
+            )
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Recipe Row
+    // MARK: - Recipe Card (image-centric grid)
 
-    private func recipeRow(_ recipe: Recipe) -> some View {
-        HStack(spacing: MPSpacing.md) {
-            // Thumbnail
-            ZStack {
-                if let photoData = recipe.photoData, let uiImage = UIImage(data: photoData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    LinearGradient(
-                        colors: [MPColors.primarySoft, MPColors.primaryMuted.opacity(0.5)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .overlay(
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 14, weight: .light))
-                            .foregroundColor(MPColors.primary.opacity(0.5))
-                    )
+    private func recipeCard(_ recipe: Recipe) -> some View {
+        Button(action: { onSelect(recipe) }) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Image
+                ZStack {
+                    if let photoData = recipe.photoData, let uiImage = UIImage(data: photoData) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .frame(height: 130)
+                            .clipped()
+                    } else {
+                        LinearGradient(
+                            colors: [MPColors.surfaceSecondary, MPColors.divider],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .frame(height: 130)
+                        .overlay(
+                            Image(systemName: "fork.knife")
+                                .font(.system(size: 24, weight: .ultraLight))
+                                .foregroundColor(MPColors.textWarm.opacity(0.4))
+                        )
+                    }
                 }
-            }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: MPRadius.sm))
+                .frame(height: 130)
 
-            // Info
-            VStack(alignment: .leading, spacing: MPSpacing.xs) {
+                // Title
                 Text(recipe.name)
-                    .font(MPTypography.body(.medium))
+                    .font(MPTypography.callout(.medium))
                     .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, MPSpacing.sm)
+                    .padding(.horizontal, MPSpacing.md)
 
-                HStack(spacing: MPSpacing.sm) {
-                    if recipe.totalTime > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 10))
-                            Text(recipe.formattedTotalTime)
-                                .font(MPTypography.small())
-                        }
-                        .foregroundColor(MPAdaptiveColors.textSecondary(for: colorScheme))
-                    }
-
-                    if !recipe.tags.isEmpty {
-                        Text(recipe.tags.prefix(2).joined(separator: ", "))
-                            .font(MPTypography.small())
-                            .foregroundColor(MPColors.primary)
-                            .lineLimit(1)
-                    }
-                }
+                Spacer(minLength: 0)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(MPColors.textTertiary)
+            .frame(height: 185)
+            .background(MPAdaptiveColors.surface(for: colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: MPRadius.md)
+                    .stroke(MPColors.divider.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.04), radius: 3, x: 0, y: 1)
         }
-        .padding(MPSpacing.md)
-        .background(MPAdaptiveColors.surface(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: MPRadius.md))
-        .shadow(color: MPColors.shadow, radius: 4, x: 0, y: 1)
+        .buttonStyle(.plain)
     }
 }

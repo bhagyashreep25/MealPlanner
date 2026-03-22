@@ -25,20 +25,17 @@ struct RecipeDetailView: View {
                         tagsSection
                     }
 
-                    Divider()
-                        .foregroundColor(MPColors.divider)
-
                     // Time & servings info bar
-                    infoBar
-
-                    Divider()
-                        .foregroundColor(MPColors.divider)
+                    VStack(spacing: MPSpacing.sm) {
+                        decorativeDivider
+                        infoBar
+                        decorativeDivider
+                    }
 
                     // Ingredients
                     ingredientsSection
 
-                    Divider()
-                        .foregroundColor(MPColors.divider)
+                    decorativeDivider
 
                     // Steps
                     stepsSection
@@ -83,33 +80,34 @@ struct RecipeDetailView: View {
     private var heroImage: some View {
         ZStack(alignment: .bottomLeading) {
             if let photoData = recipe.photoData, let uiImage = UIImage(data: photoData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 280)
-                    .clipped()
+                GeometryReader { geo in
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: 300)
+                        .clipped()
+                }
             } else {
                 LinearGradient(
-                    colors: [MPColors.primarySoft, MPColors.primaryMuted.opacity(0.3)],
+                    colors: [MPColors.surfaceSecondary, MPColors.primarySoft],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                .frame(height: 280)
                 .overlay(
                     Image(systemName: "fork.knife")
-                        .font(.system(size: 60, weight: .ultraLight))
-                        .foregroundColor(MPColors.primary.opacity(0.3))
+                        .font(.system(size: 56, weight: .ultraLight))
+                        .foregroundColor(MPColors.primaryMuted.opacity(0.5))
                 )
             }
 
             // Gradient overlay for readability
             LinearGradient(
-                colors: [.clear, .black.opacity(0.3)],
+                colors: [.clear, .black.opacity(0.25)],
                 startPoint: .center,
                 endPoint: .bottom
             )
         }
-        .frame(height: 280)
+        .frame(height: 300)
     }
 
     private var titleSection: some View {
@@ -125,7 +123,7 @@ struct RecipeDetailView: View {
                     Text("Source available")
                         .font(MPTypography.caption())
                 }
-                .foregroundColor(MPColors.primary)
+                .foregroundColor(MPColors.accent)
             }
         }
     }
@@ -136,6 +134,12 @@ struct RecipeDetailView: View {
                 MPChip(label: tag)
             }
         }
+    }
+
+    private var decorativeDivider: some View {
+        Rectangle()
+            .fill(MPColors.divider)
+            .frame(height: 0.5)
     }
 
     private var infoBar: some View {
@@ -161,7 +165,7 @@ struct RecipeDetailView: View {
         VStack(spacing: MPSpacing.xs) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(MPColors.primary)
+                .foregroundColor(MPColors.accent)
             Text(value)
                 .font(MPTypography.headline())
                 .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
@@ -173,14 +177,16 @@ struct RecipeDetailView: View {
 
     private var ingredientsSection: some View {
         VStack(alignment: .leading, spacing: MPSpacing.lg) {
-            MPSectionHeader(title: "Ingredients")
+            Text("Ingredients")
+                .font(MPTypography.headline())
+                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
 
-            VStack(spacing: MPSpacing.sm) {
-                ForEach(recipe.ingredients) { ingredient in
+            VStack(spacing: 0) {
+                ForEach(Array(recipe.ingredients.enumerated()), id: \.element.id) { index, ingredient in
                     HStack(spacing: MPSpacing.md) {
-                        Circle()
-                            .fill(MPColors.primarySoft)
-                            .frame(width: 8, height: 8)
+                        Text("\u{2022}")
+                            .font(.system(size: 18))
+                            .foregroundColor(MPColors.accent)
 
                         if !ingredient.quantity.isEmpty {
                             Text(ingredient.quantity)
@@ -194,7 +200,12 @@ struct RecipeDetailView: View {
 
                         Spacer()
                     }
-                    .padding(.vertical, MPSpacing.xs)
+                    .padding(.vertical, MPSpacing.sm)
+
+                    if index < recipe.ingredients.count - 1 {
+                        Divider()
+                            .foregroundColor(MPColors.divider.opacity(0.4))
+                    }
                 }
             }
         }
@@ -202,16 +213,18 @@ struct RecipeDetailView: View {
 
     private var stepsSection: some View {
         VStack(alignment: .leading, spacing: MPSpacing.lg) {
-            MPSectionHeader(title: "Steps")
+            Text("Steps")
+                .font(MPTypography.headline())
+                .foregroundColor(MPAdaptiveColors.textPrimary(for: colorScheme))
 
-            VStack(alignment: .leading, spacing: MPSpacing.lg) {
+            VStack(alignment: .leading, spacing: MPSpacing.xl) {
                 ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
                     HStack(alignment: .top, spacing: MPSpacing.md) {
                         // Step number
                         Text("\(index + 1)")
                             .font(MPTypography.caption(.bold))
-                            .foregroundColor(.white)
-                            .frame(width: 24, height: 24)
+                            .foregroundColor(MPColors.onPrimary)
+                            .frame(width: 26, height: 26)
                             .background(MPColors.primary)
                             .clipShape(Circle())
 

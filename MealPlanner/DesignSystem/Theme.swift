@@ -3,66 +3,95 @@ import SwiftUI
 // MARK: - Color Palette
 
 enum MPColors {
-    // Primary greens
-    static let primary = Color(hex: "2E7D32")
-    static let primaryLight = Color(hex: "4CAF50")
-    static let primarySoft = Color(hex: "E8F5E9")
-    static let primaryMuted = Color(hex: "A5D6A7")
+    // Primary — warm red-terracotta
+    static let primary = Color(hex: "C25F34")
+    static let primaryLight = Color(hex: "D4845F")
+    static let primarySoft = Color(hex: "F5E3DA")
+    static let primaryMuted = Color(hex: "C9A08D")
 
-    // Neutrals
-    static let background = Color(hex: "FAFAFA")
-    static let surface = Color.white
-    static let surfaceSecondary = Color(hex: "F5F5F5")
-    static let textPrimary = Color(hex: "1A1A1A")
-    static let textSecondary = Color(hex: "6B6B6B")
-    static let textTertiary = Color(hex: "9E9E9E")
-    static let divider = Color(hex: "E0E0E0")
-    static let shadow = Color.black.opacity(0.06)
+    // Warm accent — terracotta
+    static let accent = Color(hex: "C4724E")
+    static let accentSoft = Color(hex: "F5E6DE")
+
+    // On-primary — cream text/icons on primary backgrounds
+    static let onPrimary = Color(hex: "FEFCF8")
+
+    // Neutrals — warm parchment tones
+    static let background = Color(hex: "F5F0E8")
+    static let surface = Color(hex: "FEFCF8")
+    static let surfaceSecondary = Color(hex: "EDE8DF")
+    static let textPrimary = Color(hex: "2C2218")
+    static let textSecondary = Color(hex: "8B7E74")
+    static let textTertiary = Color(hex: "B5AA9E")
+    static let textWarm = Color(hex: "A39074") // golden warm secondary
+    static let divider = Color(hex: "DDD5C8")
+    static let shadow = Color(hex: "2C2218").opacity(0.08)
 
     // Semantic
-    static let error = Color(hex: "D32F2F")
-    static let warning = Color(hex: "F57C00")
+    static let error = Color(hex: "A63D2F")
+    static let warning = Color(hex: "C47F2A")
 
-    // Dark mode variants
-    static let backgroundDark = Color(hex: "121212")
-    static let surfaceDark = Color(hex: "1E1E1E")
-    static let surfaceSecondaryDark = Color(hex: "2C2C2C")
+    // Dark mode variants — warm darks
+    static let backgroundDark = Color(hex: "1A1612")
+    static let surfaceDark = Color(hex: "262019")
+    static let surfaceSecondaryDark = Color(hex: "332C24")
 }
 
 // MARK: - Typography
+//
+// Display/headings: Gloock (single weight, used for prominent text)
+// Body/UI: Schibsted Grotesk (variable weight)
+// Text fields: Schibsted Grotesk
 
 enum MPTypography {
+    // Gloock — display serif for headings and prominent text
+    static func gloock(_ size: CGFloat = 24) -> Font {
+        .custom("Gloock-Regular", size: size)
+    }
+
+    // Schibsted Grotesk — clean sans-serif for UI text
+    private static let grotesk = "Schibsted Grotesk"
+
+    static func display(_ size: CGFloat = 55) -> Font {
+        .custom("SchibstedGrotesk-Bold", size: size)
+    }
+
     static func largeTitle(_ weight: Font.Weight = .bold) -> Font {
-        .system(size: 32, weight: weight, design: .rounded)
+        .custom(grotesk, size: 30).weight(weight)
     }
 
     static func title(_ weight: Font.Weight = .semibold) -> Font {
-        .system(size: 24, weight: weight, design: .rounded)
+        .custom(grotesk, size: 24).weight(weight)
     }
 
     static func title2(_ weight: Font.Weight = .semibold) -> Font {
-        .system(size: 20, weight: weight, design: .rounded)
+        .custom(grotesk, size: 20).weight(weight)
     }
 
     static func headline(_ weight: Font.Weight = .semibold) -> Font {
-        .system(size: 17, weight: weight, design: .rounded)
+        .custom(grotesk, size: 17).weight(weight)
     }
 
     static func body(_ weight: Font.Weight = .regular) -> Font {
-        .system(size: 15, weight: weight, design: .rounded)
+        .custom(grotesk, size: 15).weight(weight)
     }
 
     static func callout(_ weight: Font.Weight = .regular) -> Font {
-        .system(size: 14, weight: weight, design: .rounded)
+        .custom(grotesk, size: 14).weight(weight)
     }
 
     static func caption(_ weight: Font.Weight = .medium) -> Font {
-        .system(size: 12, weight: weight, design: .rounded)
+        .custom(grotesk, size: 12).weight(weight)
     }
 
     static func small(_ weight: Font.Weight = .regular) -> Font {
-        .system(size: 11, weight: weight, design: .rounded)
+        .custom(grotesk, size: 11).weight(weight)
     }
+
+    static func cardo(_ size: CGFloat = 15) -> Font {
+        .custom(grotesk, size: size)
+    }
+
 }
 
 // MARK: - Spacing
@@ -81,9 +110,9 @@ enum MPSpacing {
 
 enum MPRadius {
     static let sm: CGFloat = 8
-    static let md: CGFloat = 12
-    static let lg: CGFloat = 16
-    static let xl: CGFloat = 24
+    static let md: CGFloat = 14
+    static let lg: CGFloat = 20
+    static let xl: CGFloat = 28
     static let full: CGFloat = 100
 }
 
@@ -118,8 +147,6 @@ extension Color {
 // MARK: - Adaptive Colors (light/dark)
 
 struct MPAdaptiveColors {
-    @Environment(\.colorScheme) static var colorScheme
-
     static func background(for scheme: ColorScheme) -> Color {
         scheme == .dark ? MPColors.backgroundDark : MPColors.background
     }
@@ -133,10 +160,10 @@ struct MPAdaptiveColors {
     }
 
     static func textPrimary(for scheme: ColorScheme) -> Color {
-        scheme == .dark ? .white : MPColors.textPrimary
+        scheme == .dark ? Color(hex: "F0E8DB") : MPColors.textPrimary
     }
 
     static func textSecondary(for scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "B0B0B0") : MPColors.textSecondary
+        scheme == .dark ? Color(hex: "B5AA9E") : MPColors.textSecondary
     }
 }
